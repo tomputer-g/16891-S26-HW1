@@ -1,34 +1,55 @@
 import heapq
+from typing import List, Dict, Tuple, Set
 
-
-def move(loc, dir):
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+def move(loc: Tuple[int], dir: int) -> Tuple[int]:
+    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0,0)]
     return loc[0] + directions[dir][0], loc[1] + directions[dir][1]
 
 
-def move_joint_state(locs, dir):
+def move_joint_state(locs: List[Tuple[int]], dirs: List[int]) -> List[Tuple[int]]:
+    #both are lists of tuples
+    assert(len(locs) == len(dirs))
     new_locs = []
-
+    for i in range(len(locs)):
+        new_locs.append(move(locs[i], dirs[i]))
     return new_locs
 
 
-def generate_motions_recursive(num_agents, cur_agent):
-    directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
+def generate_motions_recursive(num_agents: int, cur_agent: int):
+    # directions = [(0, -1), (1, 0), (0, 1), (-1, 0), (0, 0)]
+    directions = range(5)
 
-    joint_state_motions = []
+    joint_state_motions = [[dir] for dir in directions]
+    for i in range(1, num_agents):
+        expanded_motions = []
+        for jsm in joint_state_motions:
+            for dir in directions:
+                # Expanded motions gets all combinations of previous joint state motions + new direction
+                expanded_motions.append(jsm + [dir])
+        joint_state_motions = expanded_motions
+    
 
     return joint_state_motions
 
 
-def is_valid_motion(old_loc, new_loc):
+def is_valid_motion(old_loc, new_loc: List[Tuple[int]]):
     ##############################
     # Task 1.3/1.4: Check if a move from old_loc to new_loc is valid
     # Check if two agents are in the same location (vertex collision)
-    # TODO
+
+    num_agents = len(old_loc)
+    vertex_occupied_new_loc: Set = set(new_loc)
+    if len(vertex_occupied_new_loc) < num_agents:
+        # This means there were duplicates removed when constructing a set, therefore a vertex was occupied at the same time by two agents
+        return False
 
     # Check edge collision
-    # TODO
-
+    for i in range(num_agents):
+        for j in range(i + 1, num_agents):
+            if old_loc[i] == new_loc[j] and old_loc[j] == new_loc[i]:
+                # Edge collision detected, two agents swapped places
+                return False
+    
     return True
 
 
@@ -127,14 +148,14 @@ def compare_nodes(n1, n2):
     return n1['g_val'] + n1['h_val'] < n2['g_val'] + n2['h_val']
 
 
-def in_map(map, loc):
+def in_map(map: List[List[bool]], loc: Tuple) -> bool:
     if loc[0] >= len(map) or loc[1] >= len(map[0]) or min(loc) < 0:
         return False
     else:
         return True
 
 
-def all_in_map(map, locs):
+def all_in_map(map: List[List[bool]], locs: List[Tuple]) -> bool:
     for loc in locs:
         if not in_map(map, loc):
             return False
@@ -192,6 +213,7 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
         start_loc   - start positions
         goal_loc    - goal positions
         num_agent   - total number of agents in fleet
+        h_values    - ASSUME this is distToGoal = h_values[goalNum][(x,y)]
     """
 
     open_list = []
@@ -202,7 +224,11 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
     # Task 1.1: Iterate through starts and use list of h_values to calculate total h_value for root node
     #
     # TODO
-
+    for i in range(num_agents):
+        agent_start_loc = starts[i]
+        h_value += h_values[i][agent_start_loc]
+    print("Starting h_value is " + str(h_value))
+    
     root = {'loc': starts, 'g_val': 0, 'h_val': h_value, 'parent': None}
     push_node(open_list, root)
     closed_list[tuple(root['loc'])] = root
@@ -210,7 +236,6 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
     ##############################
     # Task 1.1:  Generate set of all possible motions in joint state space
     #
-    # TODO
     directions = generate_motions_recursive(num_agents, 0)
     while len(open_list) > 0:
         curr = pop_node(open_list)
@@ -219,11 +244,10 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
             return get_path(curr)
 
         for dir in directions:
-
+            
             ##############################
             # Task 1.1:  Update position of each agent
             #
-            # TODO
             child_loc = move_joint_state(curr['loc'], dir)
 
             if not all_in_map(my_map, child_loc):
@@ -232,8 +256,13 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
             # Task 1.1:  Check if any agent is in an obstacle
             #
             valid_move = True
-            # TODO
-
+            
+            for _child_loc in child_loc:
+                (x,y) = _child_loc
+                if my_map[x][y]:
+                    valid_move = False
+                    break
+            
             if not valid_move:
                 continue
 
@@ -247,8 +276,11 @@ def joint_state_a_star(my_map, starts, goals, h_values, num_agents):
             ##############################
             # Task 1.1:  Calculate heuristic value
             #
-            # TODO
             h_value = 0
+            
+            for i in range(num_agents):
+                _child_loc = child_loc[i]
+                h_value += h_values[i][_child_loc]
 
             # Create child node
             child = {'loc': child_loc,
