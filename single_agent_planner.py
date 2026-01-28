@@ -179,30 +179,31 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     closed_list = dict()
     earliest_goal_timestep = 0
     h_value = h_values[start_loc]
-    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None}
+    root = {'loc': start_loc, 'g_val': 0, 'h_val': h_value, 'parent': None, 'timestep': 0}
     push_node(open_list, root)
-    closed_list[(root['loc'])] = root
+    closed_list[(root['loc'], root['timestep'])] = root
     while len(open_list) > 0:
         curr = pop_node(open_list)
         #############################
         # Task 2.2: Adjust the goal test condition to handle goal constraints
         if curr['loc'] == goal_loc:
             return get_path(curr)
-        for dir in range(4):
-            child_loc = move(curr['loc'], dir)
+        for dir in range(5):
+            child_loc = move(curr['loc'], dir) #Logic to remain in same place is included in move()
             if not in_map(my_map, child_loc) or my_map[child_loc[0]][child_loc[1]]:
                 continue
             child = {'loc': child_loc,
                      'g_val': curr['g_val'] + 1,
                      'h_val': h_values[child_loc],
-                     'parent': curr}
-            if (child['loc']) in closed_list:
-                existing_node = closed_list[(child['loc'])]
+                     'parent': curr,
+                     'timestep': curr['timestep'] + 1}
+            if (child['loc'], child['timestep']) in closed_list:
+                existing_node = closed_list[(child['loc'], child['timestep'])]
                 if compare_nodes(child, existing_node):
-                    closed_list[(child['loc'])] = child
+                    closed_list[(child['loc'], child['timestep'])] = child
                     push_node(open_list, child)
             else:
-                closed_list[(child['loc'])] = child
+                closed_list[(child['loc'], child['timestep'])] = child
                 push_node(open_list, child)
 
     return None  # Failed to find solutions
