@@ -103,14 +103,13 @@ def build_constraint_table(constraints, agent):
     #               for a more efficient constraint violation check in the 
     #               is_constrained function.
     
-    # from timestep -> tuples of constrained locations
     constraints_table: Dict[int, List[Tuple[int]]] = dict()
     for constraint in constraints:
         if constraint['agent'] == agent:
             if constraint['timestep'] in constraints_table:
-                constraints_table[constraint['timestep']].append(constraint['loc'][0])
+                constraints_table[constraint['timestep']].append(constraint['loc'])
             else:
-                constraints_table[constraint['timestep']] = constraint['loc']
+                constraints_table[constraint['timestep']] = [constraint['loc']]
     return constraints_table
 
 
@@ -139,9 +138,15 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
     #               any given constraint. For efficiency the constraints are indexed in a constraint_table
     #               by time step, see build_constraint_table.
     
-    # Vertex
+    # Format:
+    # ctable is {4: [[(1, 5)], [(1, 4)]], 1: [[(1, 2), (1, 3)]]} # Where t=4 has constraints on vertex (1,5)(1,4) and t=1 transition from (1,2)->(1,3)
+
     if next_time in constraint_table:
-        if next_loc in constraint_table[next_time]:
+        # Vertex
+        if [next_loc] in constraint_table[next_time]:
+            return True
+        # Edge
+        if [curr_loc, next_loc] in constraint_table[next_time]:
             return True
     
     return False
@@ -189,7 +194,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     #           rather than space domain, only.
 
     constraints_table = build_constraint_table(constraints=constraints, agent=agent)
-    # print("ctable is " + str(constraints_table))
+    print("ctable is " + str(constraints_table))
     open_list = []
     closed_list = dict()
     earliest_goal_timestep = 0
