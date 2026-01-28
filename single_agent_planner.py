@@ -184,7 +184,7 @@ def all_in_map(map: List[List[bool]], locs: List[Tuple]) -> bool:
     return True
 
 
-def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
+def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, T=1000):
     """ my_map      - binary obstacle map
         start_loc   - start position
         goal_loc    - goal position
@@ -218,6 +218,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
                     break
             if not goal_loc_constrained:
                 return get_path(curr)
+        if curr['timestep'] >= T:
+            continue 
         for dir in range(5):
             child_loc = move(curr['loc'], dir) #Logic to remain in same place is included in move()
             if not in_map(my_map, child_loc) or my_map[child_loc[0]][child_loc[1]]:
