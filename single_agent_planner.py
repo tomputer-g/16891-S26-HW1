@@ -102,8 +102,16 @@ def build_constraint_table(constraints, agent):
     #               the given agent for each time step. The table can be used
     #               for a more efficient constraint violation check in the 
     #               is_constrained function.
-
-    pass
+    
+    # from timestep -> tuples of constrained locations
+    constraints_table: Dict[int, List[Tuple[int]]] = dict()
+    for constraint in constraints:
+        if constraint['agent'] == agent:
+            if constraint['timestep'] in constraints_table:
+                constraints_table[constraint['timestep']].append(constraint['loc'][0])
+            else:
+                constraints_table[constraint['timestep']] = constraint['loc']
+    return constraints_table
 
 
 def get_location(path, time):
@@ -130,8 +138,13 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
     # Task 1.2/1.3/1.4: Check if a move from curr_loc to next_loc at time step next_time violates
     #               any given constraint. For efficiency the constraints are indexed in a constraint_table
     #               by time step, see build_constraint_table.
-
-    pass
+    
+    # Vertex
+    if next_time in constraint_table:
+        if next_loc in constraint_table[next_time]:
+            return True
+    
+    return False
 
 
 def push_node(open_list, node):
@@ -175,6 +188,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     # Task 1.2/1.3/1.4: Extend the A* search to search in the space-time domain
     #           rather than space domain, only.
 
+    constraints_table = build_constraint_table(constraints=constraints, agent=agent)
+    # print("ctable is " + str(constraints_table))
     open_list = []
     closed_list = dict()
     earliest_goal_timestep = 0
@@ -191,6 +206,9 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         for dir in range(5):
             child_loc = move(curr['loc'], dir) #Logic to remain in same place is included in move()
             if not in_map(my_map, child_loc) or my_map[child_loc[0]][child_loc[1]]:
+                continue
+            if is_constrained(curr['loc'], child_loc, curr['timestep']+1, constraint_table=constraints_table):
+                # print("is constrained")
                 continue
             child = {'loc': child_loc,
                      'g_val': curr['g_val'] + 1,

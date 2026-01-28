@@ -30,6 +30,9 @@ class PrioritizedPlanningSolver(object):
         result = []
         constraints = []
 
+        constraints.append({'agent': 0, 'loc': [(1,5)], 'timestep': 4})
+        constraints.append({'agent': 0, 'loc': [(1,4)], 'timestep': 4})
+
         for i in range(self.num_of_agents):  # Find path for each agent
             path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, constraints)
