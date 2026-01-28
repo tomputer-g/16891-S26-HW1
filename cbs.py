@@ -2,6 +2,7 @@ import time as timer
 import heapq
 import random
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost
+import copy
 
 
 def detect_first_collision_for_path_pair(path1, path2):
@@ -124,8 +125,8 @@ class CBSSolver(object):
         # print(root['collisions'])
 
         # Task 2.2: Testing
-        for collision in root['collisions']:
-            print(standard_splitting(collision))
+        # for collision in root['collisions']:
+        #     print(standard_splitting(collision))
 
         ##############################
         # Task 2.3: High-Level Search
@@ -136,9 +137,30 @@ class CBSSolver(object):
         #                standard_splitting function). Add a new child node to your open list for each constraint
         #           Ensure to create a copy of any objects that your child nodes might inherit
 
-        # These are just to print debug output - can be modified once you implement the high-level search
-        self.print_results(root)
-        return root['paths']
+        while len(self.open_list) > 0:
+            P = self.pop_node()
+            P_collisions = detect_collisions_among_all_paths(P['paths'])
+            if len(P_collisions) == 0:
+                self.print_results(P)
+                return P['paths']
+
+            # Select a collision (right now, arbitrarily select the first one)
+            collision = P_collisions[0]
+            constraints = standard_splitting(collision=collision)
+            for constraint in constraints:
+                Q = copy.deepcopy(P)
+                Q['constraints'].extend([constraint])
+                agent = constraint['agent']
+                agent_path = a_star(
+                    self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent], agent, Q['constraints']
+                )
+                
+                if path is not None:
+                    Q['paths'][agent] = agent_path
+                    Q['collisions'] = detect_collisions_among_all_paths(Q['paths'])
+                    Q['cost'] = get_sum_of_cost(Q['paths'])
+                    self.push_node(Q)
+        raise BaseException('No solutions')
 
     def print_results(self, node):
         print("\n Found a solution! \n")
