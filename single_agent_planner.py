@@ -104,13 +104,15 @@ def build_constraint_table(constraints, agent):
     #               is_constrained function.
     
     constraints_table: Dict[int, List[Tuple[int]]] = dict()
+    max_timestep = 0
     for constraint in constraints:
         if constraint['agent'] == agent:
+            max_timestep = max(max_timestep, constraint['timestep'])
             if constraint['timestep'] in constraints_table:
                 constraints_table[constraint['timestep']].append(constraint['loc'])
             else:
                 constraints_table[constraint['timestep']] = [constraint['loc']]
-    return constraints_table
+    return constraints_table, max_timestep
 
 
 def get_location(path, time):
@@ -147,6 +149,8 @@ def is_constrained(curr_loc, next_loc, next_time, constraint_table):
             return True
         # Edge
         if [curr_loc, next_loc] in constraint_table[next_time]:
+            return True
+        if [next_loc, curr_loc] in constraint_table[next_time]:
             return True
     
     return False
@@ -193,7 +197,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     # Task 1.2/1.3/1.4: Extend the A* search to search in the space-time domain
     #           rather than space domain, only.
 
-    constraints_table = build_constraint_table(constraints=constraints, agent=agent)
+    constraints_table, max_constraint_timestep = build_constraint_table(constraints=constraints, agent=agent)
     print("ctable is " + str(constraints_table))
     open_list = []
     closed_list = dict()
@@ -207,7 +211,13 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         #############################
         # Task 2.2: Adjust the goal test condition to handle goal constraints
         if curr['loc'] == goal_loc:
-            return get_path(curr)
+            goal_loc_constrained = False
+            for t in range(curr['timestep'], max_constraint_timestep+1):
+                if is_constrained(curr['loc'], curr['loc'], t, constraint_table=constraints_table):
+                    goal_loc_constrained = True
+                    break
+            if not goal_loc_constrained:
+                return get_path(curr)
         for dir in range(5):
             child_loc = move(curr['loc'], dir) #Logic to remain in same place is included in move()
             if not in_map(my_map, child_loc) or my_map[child_loc[0]][child_loc[1]]:
