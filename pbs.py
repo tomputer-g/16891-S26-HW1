@@ -6,14 +6,17 @@ import copy
 from single_agent_planner import compute_heuristics, a_star, get_location, get_sum_of_cost
 from topological_sort import TopologyGraph
 from cbs import detect_collisions_among_all_paths
+from dataclasses import dataclass
+from typing import List, Dict, Tuple, Any
 
 
 def generate_priority_pairs(collision):
-    priority_pairs = []
-
+    a1 = collision['a1']
+    a2 = collision['a2']
+    
+    priority_pairs = [(a1,a2), (a2,a1)]
     ##############################
-    # TODO Task 4.1: Generate list of priority pairs based on the given collision
-
+    # Task 4.1: Generate list of priority pairs based on the given collision
     return priority_pairs
 
 
@@ -110,9 +113,32 @@ class PBSSolver(object):
         return node
 
     def update_plan(self, node, i):
-
+        
+        def path_to_constraints(path: List[Tuple[int,int]], constrained_agent: int) -> List[Dict[str,Any]]:
+            constraints = []
+            for t in range(len(path)):
+                constraints.append({'agent': constrained_agent, 'loc': [path[t]], 'timestep': t})
+            for t in range(len(path)-1):
+                constraints.append({'agent': constrained_agent, 'loc': [path[t], path[t+1]], 'timestep': t+1})
+            return constraints
         # Task 4.2 TODO : Refer to the given psuedocode or the cited paper for more details on what this function does
-
+        
+        LIST = get_lower_priority_agents(node['priority_pairs'], i)
+        for j in LIST:
+            if j == i or collide_with_higher_priority_agents(node, j):
+                # Make constraints TODO
+                constraints = []
+                for k in get_higher_priority_agents(node['priority_pairs'], j):
+                    # add constraints
+                    path_k = node['paths'][k]
+                    constraints.extend(path_to_constraints(path_k, j))
+                    
+                path_j = a_star(self.my_map, self.starts[j], self.goals[j], self.heuristics[j], j, 
+                                constraints)
+                if path_j is None:
+                    return False
+                
+                node['paths'][j] = path_j
         return True
 
     def find_solution(self):
@@ -132,8 +158,13 @@ class PBSSolver(object):
         ##############################
         # Task 4.2: Initialize the root node dict, what will be the initial priority pairs for standard PBS?
         #
-        # TODO      
-        root = None
+        root = {
+            'cost': 0,
+            'priority_pairs': [],
+            'collisions': [],
+            'paths': [[] for _ in range(self.num_of_agents)]
+        }
+        
 
         ##############################
         # Task 4.2: Find initial path for each agent
@@ -146,15 +177,14 @@ class PBSSolver(object):
 
         ##############################
         # Task 4.2: Add root to search stack
-        # TODO
+        self.push_node_to_stack(root)
 
         while len(self.search_stack) > 0:
 
             ##############################
             # Task 4.2: Get next node from stack
             #     
-            # TODO
-            next_node = None
+            next_node = self.pop_node_from_stack()
 
             # print expanded node info
             print("Expanded node cost: {} priority {} collisions {}".format(next_node['cost'],
@@ -170,6 +200,9 @@ class PBSSolver(object):
             # Task 4.1: Generate priority pairs for this collision
             #     
             priority_pairs = generate_priority_pairs(collision)
+            
+            children_heap = []
+            heap_id = 0 # incremented per each item, to break ties
 
             # Create child nodes
             for priority_pair in priority_pairs:
@@ -183,7 +216,9 @@ class PBSSolver(object):
                 # - Duplicate detection - check if priority pair already exists in parent node
                 # - If priority pair already exists in parent node, skip this child
                 # - Else add priority pair to child priority pairs
-                # TODO
+                if priority_pair in next_node:
+                    continue
+                child['priority_pairs'].append(priority_pair)
 
                 ##############################
                 # Task 4.2:  Replan for all agents in topological order
@@ -194,9 +229,14 @@ class PBSSolver(object):
                     child['cost'] = get_sum_of_cost(child['paths'])
                     child['collisions'] = detect_collisions_among_all_paths(child['paths'])
 
+                heapq.heappush(children_heap, (child['cost'], heap_id, child))
+                heap_id += 1
+            
             ##############################
             # Task 4.2:  # Add nodes to stack from heap in non increasing order of cost
-            # TODO
+            while len(children_heap) > 0:
+                _, _, child = heapq.heappop(children_heap)
+                self.push_node_to_stack(child)
 
         return None
 
