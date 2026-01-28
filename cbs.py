@@ -11,8 +11,19 @@ def detect_first_collision_for_path_pair(path1, path2):
     #           A vertex collision occurs if both robots occupy the same location at the same timestep
     #           An edge collision occurs if the robots swap their location at the same timestep.
     #           You should use "get_location(path, t)" to get the location of a robot at time t.
-
-    pass
+    min_t = min(len(path1), len(path2))
+    max_t = max(len(path1), len(path2))
+    for t in range(max_t):
+        last_valid_t_agent1 = min(len(path1), t)
+        last_valid_t_agent2 = min(len(path2), t)
+        if get_location(path1, last_valid_t_agent1) == get_location(path2, last_valid_t_agent2):
+            return {'loc': [get_location(path1, last_valid_t_agent1)], 'timestep': t}
+    
+    for t in range(min_t-1):
+        if get_location(path1, t) == get_location(path2, t+1) and get_location(path1, t+1) == get_location(path2, t):
+            return {'loc': [get_location(path1, t), get_location(path1, t+1)], 'timestep': t+1}
+    
+    return None
 
 
 def detect_collisions_among_all_paths(paths):
@@ -21,8 +32,15 @@ def detect_collisions_among_all_paths(paths):
     #           A collision can be represented as dictionary that contains the id of the two robots, the vertex or edge
     #           causing the collision, and the timestep at which the collision occurred.
     #           You should use your detect_collision function to find a collision between two robots.
-
-    pass
+    collisions = []
+    for agent1 in range(len(paths)):
+        for agent2 in range(agent1+1, len(paths)):
+            res = detect_first_collision_for_path_pair(paths[agent1], paths[agent2])
+            if res:
+                res['a1'] = agent1
+                res['a2'] = agent2
+                collisions.append(res)
+    return collisions
 
 
 def standard_splitting(collision):
@@ -34,8 +52,9 @@ def standard_splitting(collision):
     #           Edge collision: the first constraint prevents the first agent to traverse the specified edge at the
     #                          specified timestep, and the second constraint prevents the second agent to traverse the
     #                          specified edge at the specified timestep
-
-    pass
+    constraint1 = {'agent': collision['a1'], 'loc': collision['loc'], 'timestep': collision['timestep']}
+    constraint2 = {'agent': collision['a2'], 'loc': collision['loc'], 'timestep': collision['timestep']}
+    return [constraint1, constraint2]
 
 
 class CBSSolver(object):
@@ -102,7 +121,7 @@ class CBSSolver(object):
         self.push_node(root)
 
         # Task 2.1: Testing
-        print(root['collisions'])
+        # print(root['collisions'])
 
         # Task 2.2: Testing
         for collision in root['collisions']:

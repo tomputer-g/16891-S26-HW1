@@ -47,6 +47,19 @@ class PrioritizedPlanningSolver(object):
                 return result
         
         @dataclass
+        class GoalVertexConstraint:
+            loc: Tuple[int, int]
+            timestep_start: int
+
+            def getConstraintsList(self, agent_start: int, agent_end: int, time_end: int) -> List[Dict[str, Any]]:
+                result = []
+                for i in range(agent_start, agent_end):
+                    for t in range(self.timestep_start, time_end):
+                        result.append({'agent': i, 'loc': [self.loc], 'timestep': t})
+                # print("getCL: " + str(result))
+                return result
+        
+        @dataclass
         class EdgeConstraint:
             loc1: Tuple[int, int]
             loc2: Tuple[int, int]
@@ -59,13 +72,20 @@ class PrioritizedPlanningSolver(object):
                 # print("getCL: " + str(result))
                 return result
 
+        num_V = sum([1 for row in self.my_map for cell in row if not cell])
+        longest_path_so_far = 0
+        agent_goal_constraints: List[GoalVertexConstraint] = []
+
         for i in range(self.num_of_agents):  # Find path for each agent
+            T = longest_path_so_far + num_V
             path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
-                          i, constraints)
+                          i, constraints, T)
             if path is None:
                 raise BaseException('No solutions')
             result.append(path)
-            #print(path) # [(2, 2), (2, 3), (2, 4)]
+            longest_path_so_far = max(longest_path_so_far, len(path))
+            
+            agent_goal_constraints.append(GoalVertexConstraint(loc=path[-1], timestep_start=len(path)))
 
             ##############################
             # Task 1.3/1.4/2: Add constraints here
@@ -85,6 +105,8 @@ class PrioritizedPlanningSolver(object):
                 constraints.extend(cv.getConstraintsList(agent_start=i+1, agent_end=self.num_of_agents))
             for ce in _constraints_edge:
                 constraints.extend(ce.getConstraintsList(agent_start=i+1, agent_end=self.num_of_agents))
+            for cg in agent_goal_constraints:
+                constraints.extend(cg.getConstraintsList(agent_start=i+1, agent_end=self.num_of_agents, time_end=T+1))
             print(constraints)
 
         self.CPU_time = timer.time() - start_time

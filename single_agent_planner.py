@@ -184,13 +184,14 @@ def all_in_map(map: List[List[bool]], locs: List[Tuple]) -> bool:
     return True
 
 
-def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, T=1000):
+def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, T=1000000):
     """ my_map      - binary obstacle map
         start_loc   - start position
         goal_loc    - goal position
         h_values    - precomputed heuristic values for each location on the map
         agent       - the agent that is being re-planned
         constraints - constraints defining where robot should or cannot go at each timestep
+        T           - timeout (nodes above this timestep will be pruned)
     """
 
     ##############################
@@ -198,7 +199,7 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints, T=1000):
     #           rather than space domain, only.
 
     constraints_table, max_constraint_timestep = build_constraint_table(constraints=constraints, agent=agent)
-    print("ctable is " + str(constraints_table))
+    # print("ctable is " + str(constraints_table))
     open_list = []
     closed_list = dict()
     earliest_goal_timestep = 0
