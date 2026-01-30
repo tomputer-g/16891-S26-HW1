@@ -216,7 +216,7 @@ class PBSSolver(object):
                 # - Duplicate detection - check if priority pair already exists in parent node
                 # - If priority pair already exists in parent node, skip this child
                 # - Else add priority pair to child priority pairs
-                if priority_pair in next_node:
+                if priority_pair in next_node['priority_pairs']:
                     continue
                 child['priority_pairs'].append(priority_pair)
 
